@@ -6,7 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System;
-public class Cart : MonoBehaviour, TrainCart, ITransformer
+public class Cart : MonoBehaviour, ITransformer
 {
     protected ConfigurableJoint joint;
     public float detachForceThreshhold = 0.1f;
@@ -57,7 +57,7 @@ public class Cart : MonoBehaviour, TrainCart, ITransformer
 
     protected void LateUpdate()
     {
-        //SnapCartToTrack();
+        SnapCartToTrack();
     }
 
     /* private void StartCouple()
@@ -232,7 +232,8 @@ public class Cart : MonoBehaviour, TrainCart, ITransformer
     {
         allChildren = gameObject.GetComponentsInChildren<Transform>();
         rodTransform = Array.Find<Transform>(allChildren, c => c.gameObject.name == "rodTransform");
-        if(!isTrain){
+        if (!isTrain)
+        {
             handTransform = Array.Find<Transform>(allChildren, c => c.gameObject.name == "handTransform");
         }
     }
