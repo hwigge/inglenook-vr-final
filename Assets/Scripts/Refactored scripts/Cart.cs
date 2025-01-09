@@ -131,7 +131,6 @@ public class Cart : MonoBehaviour, ITransformer
         joint.angularZMotion = ConfigurableJointMotion.Locked;
 
         var spring = joint.linearLimitSpring;
-        spring.spring = 1000f;
         spring.spring = 0.5f;
         spring.damper = 50f;
         joint.linearLimitSpring = spring;
@@ -150,7 +149,7 @@ public class Cart : MonoBehaviour, ITransformer
     }
     void Update()
     {
-        //SnapCartToTrack();
+        SnapCartToTrack();
         if (joints.Count > 0)
         {
             for (int i = joints.Count - 1; i >= 0; i--)
@@ -214,12 +213,12 @@ public class Cart : MonoBehaviour, ITransformer
         //do something
     }
 
-    public void CoupleNext(TrainCart next)
+    public void CoupleNext(LLNode<Cart> next)
     {
         //do something
     }
 
-    public void CouplePrev(TrainCart prev)
+    public void CouplePrev(LLNode<Cart> prev)
     {
         //do something
     }
