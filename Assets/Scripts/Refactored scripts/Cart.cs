@@ -6,33 +6,49 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using Unity.VisualScripting;
+using System.Diagnostics.Tracing;
 public class Cart : MonoBehaviour, ITransformer
 {
-    protected ConfigurableJoint joint;
-    public float detachForceThreshhold = 0.1f;
+    protected HingeJoint joint;
     protected Grabbable grabbable;
     protected SplineContainer splineContainer;
     protected UnityEngine.Vector3 trainPos;
     protected ArrayList splines;
     protected Spline[] splinesArray;
-    protected List<ConfigurableJoint> joints = new List<ConfigurableJoint>();
+    protected List<HingeJoint> joints = new List<HingeJoint>();
     protected Transform[] allChildren;
     protected Transform rodTransform, handTransform;
     public bool isTrain = false;
+    public Cart next = null, prev = null;
+    public bool isEnd = false;
+    private int count;
+    public String id;
+    String winConCheck = "";
+    Transform startTransform;
+    public AudioSource attachSound, detachSound, winSound;
     // Start is called before the first frame update
     void Start()
     {
         GetSpline();
-        //StartCouple();
         FindAttachTransforms();
+        startTransform = gameObject.transform;
     }
 
-    public void OnCollisionEnter(Collision collision)
+    public void OnTriggerEnter(Collider collider)
     {
+        //Debug.Log("Trigger entered");
+        if (collider.name.Equals("HandTransform") && next == null)
+        {
 
-        Debug.Log("Collision with: " + collision.gameObject.name);
-        Cart otherComponent = collision.gameObject.GetComponentInParent<Cart>();
-        /* Transform otherTransform = otherComponent.transform;
+            Cart connectedBody = collider.gameObject.GetComponentInParent<Cart>();
+            CreateJoint(connectedBody.GetComponent<Rigidbody>());
+            attachSound.Play(0);
+            next = connectedBody;
+            connectedBody.prev = gameObject.GetComponent<Cart>();
+        }
+        //Cart otherComponent = collision.gameObject.GetComponentInParent<Cart>();
+        /* Transform otherTransform = otherComponent.transform;                //här börjar wack
         float distToHand = Vector3.Distance(handTransform.position, otherTransform.position);
         float distToRod = Vector3.Distance(rodTransform.position, otherTransform.position);
         if (distToHand > distToRod)
@@ -42,8 +58,8 @@ public class Cart : MonoBehaviour, ITransformer
         else
         {
             Debug.Log("Det borde vara prev!");
-        }  */
-        Debug.Log("othercomp is: " + otherComponent);
+        }  */                                                                  //här slutar wack
+        /* Debug.Log("othercomp is: " + otherComponent);
         if (otherComponent != null)
         {
             Debug.Log("if sats för joints nådd");
@@ -52,33 +68,46 @@ public class Cart : MonoBehaviour, ITransformer
         else
         {
             Debug.Log("if sats ej nådd. isconn: " + IsConnected());
-        }
+        } */
     }
 
     protected void LateUpdate()
     {
-        SnapCartToTrack();
+        if (isEnd == false)
+        {
+            SnapCartToTrack();
+        }
     }
 
-    /* private void StartCouple()
+    public void FixedUpdate()
     {
-        if (next == null) //om inte uppdaterad genom inspectorn
+        if (isTrain)
         {
-            CoupleNext(new NullCart()); //"koppla" med NullCart
+            if (next != null)
+            {
+                winConCheck = "";
+                Cart iterator = next;
+                count = 1;
+                winConCheck = winConCheck + iterator.id;
+                while (iterator.next != null)
+                {
+                    iterator = iterator.next;
+                    count++;
+                    winConCheck = winConCheck + iterator.id;
+                    if (winConCheck.Contains("12345"))
+                    {
+                        winSound.Play(0);
+                    }
+                }
+            }
+            else
+            {
+                winConCheck = "";
+                count = 0;
+            }
+            Debug.Log(winConCheck);
         }
-        else
-        {
-            CoupleNext(next); //annars, koppla med nästa
-        }
-        if (prev == null) //om inte uppdaterad genom inspectorn
-        {
-            CoupleNext(new NullCart()); //"koppla" med NullCart
-        }
-        else
-        {
-            CoupleNext(next); //annars, koppla med nästa
-        }
-    } */
+    }
 
     new public void SnapCartToTrack()
     {
@@ -114,42 +143,38 @@ public class Cart : MonoBehaviour, ITransformer
 
     public void CreateJoint(Rigidbody connectedBody)
     {
-        ConfigurableJoint newJoint = gameObject.AddComponent<ConfigurableJoint>();
+        HingeJoint newJoint = gameObject.AddComponent<HingeJoint>();
+        Vector3 newAnchor = new Vector3(0, 0, 0.5228f);
+        newJoint.anchor = newAnchor;
         newJoint.connectedBody = connectedBody;
         SetupJointLimits(newJoint);
         joints.Add(newJoint);
-        Debug.Log("Joint created with: " + connectedBody.name);
+        //Debug.Log("Joint created with: " + connectedBody.name);
     }
-    public void SetupJointLimits(ConfigurableJoint joint)
+    public void SetupJointLimits(HingeJoint joint)
     {
-        joint.xMotion = ConfigurableJointMotion.Limited;
-        joint.yMotion = ConfigurableJointMotion.Limited;
-        joint.zMotion = ConfigurableJointMotion.Limited;
-
-        joint.angularXMotion = ConfigurableJointMotion.Locked;
-        joint.angularYMotion = ConfigurableJointMotion.Locked;
-        joint.angularZMotion = ConfigurableJointMotion.Locked;
-
-        var spring = joint.linearLimitSpring;
-        spring.spring = 0.5f;
-        spring.damper = 50f;
-        joint.linearLimitSpring = spring;
+        joint.useLimits = true;
+        JointLimits limits = joint.limits;
+        limits.min = 10;
+        limits.max = 10;
+        limits.bounciness = 0;
+        limits.bounceMinVelocity = 0;
+        joint.limits = limits;
     }
 
-    protected bool ShouldDetachDistance(ConfigurableJoint joint)
+    protected bool ShouldDetachDistance(HingeJoint joint)
     {
         if (joint == null || joint.connectedBody == null)
             return false;
 
         float distance = Vector3.Distance(transform.position, joint.connectedBody.transform.position);
-        Debug.Log($"Distance for joint: {distance}");
-        float distanceThreshold = 3.0f;
+        //Debug.Log($"Distance for joint: {distance}");
+        float distanceThreshold = 1.3f;
 
         return distance > distanceThreshold;
     }
     void Update()
     {
-        SnapCartToTrack();
         if (joints.Count > 0)
         {
             for (int i = joints.Count - 1; i >= 0; i--)
@@ -170,8 +195,11 @@ public class Cart : MonoBehaviour, ITransformer
             if (ShouldDetachDistance(joints[i]))
             {
                 Destroy(joints[i]);
+                next.prev = null;
+                next = null;
                 joints.RemoveAt(i);
-                Debug.Log($"Joint {i} destroyed due to distance");
+                detachSound.Play(0);
+                //Debug.Log($"Joint {i} destroyed due to distance");
             }
         }
     }
@@ -207,20 +235,6 @@ public class Cart : MonoBehaviour, ITransformer
                 break; // Exit the loop after detaching one joint
             }
         }
-    }
-    public void SplitTrain()
-    {
-        //do something
-    }
-
-    public void CoupleNext(LLNode<Cart> next)
-    {
-        //do something
-    }
-
-    public void CouplePrev(LLNode<Cart> prev)
-    {
-        //do something
     }
 
     public void Initialize(IGrabbable grabbable)
