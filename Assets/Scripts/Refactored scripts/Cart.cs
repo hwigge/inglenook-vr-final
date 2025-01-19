@@ -81,6 +81,7 @@ public class Cart : MonoBehaviour, ITransformer
 
     public void FixedUpdate()
     {
+        gameObject.GetComponent<Rigidbody>().velocity = new Vector3(0, 0, 0);
         if (isTrain)
         {
             if (next != null)
@@ -169,7 +170,7 @@ public class Cart : MonoBehaviour, ITransformer
 
         float distance = Vector3.Distance(transform.position, joint.connectedBody.transform.position);
         //Debug.Log($"Distance for joint: {distance}");
-        float distanceThreshold = 1.3f;
+        float distanceThreshold = 1.5f;
 
         return distance > distanceThreshold;
     }
@@ -195,8 +196,10 @@ public class Cart : MonoBehaviour, ITransformer
             if (ShouldDetachDistance(joints[i]))
             {
                 Destroy(joints[i]);
+                next.GetComponent<Rigidbody>().velocity = new Vector3(0, 0, 0);
                 next.prev = null;
                 next = null;
+                gameObject.GetComponent<Rigidbody>().velocity = new Vector3(0, 0, 0);
                 joints.RemoveAt(i);
                 detachSound.Play(0);
                 //Debug.Log($"Joint {i} destroyed due to distance");
